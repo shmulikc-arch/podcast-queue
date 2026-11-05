@@ -1,4 +1,4 @@
-const CACHE = 'podq-v3';
+const CACHE = 'podq-v4';
 const ASSETS = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
@@ -12,21 +12,19 @@ self.addEventListener('activate', e => {
   );
 });
 
+// קודם רשת (כדי שעדכונים יגיעו מיד), ובלי רשת – מהמטמון
 self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET' || new URL(req.url).origin !== location.origin) return;
-
-  // דפים: קודם רשת (כדי לקבל עדכונים), ובלי רשת – מהמטמון
-  if (req.mode === 'navigate') {
-    e.respondWith(
-      fetch(req).then(r => {
+  e.respondWith(
+    fetch(req).then(r => {
+      if (r.ok) {
         const copy = r.clone();
-        caches.open(CACHE).then(c => c.put('./index.html', copy));
-        return r;
-      }).catch(() => caches.match('./index.html'))
-    );
-    return;
-  }
-
-  e.respondWith(caches.match(req, { ignoreSearch: true }).then(r => r || fetch(req)));
+        caches.open(CACHE).then(c => c.put(req.mode === 'navigate' ? './index.html' : req, copy));
+      }
+      return r;
+    }).catch(() =>
+      caches.match(req, { ignoreSearch: true }).then(r => r || caches.match('./index.html'))
+    )
+  );
 });

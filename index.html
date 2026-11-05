@@ -11,12 +11,13 @@
 <style>
   :root{
     --bg:#111318; --card:#1b1e26; --card2:#232733; --text:#f2f3f5; --muted:#9aa0ad;
-    --accent:#ff3b4e; --accent2:#ff6b5a; --ok:#2fbf71; --line:#2c3040;
+    --accent:#ff3b4e; --accent2:#ff6b5a; --ok:#2fbf71; --audio:#3b82f6; --line:#2c3040;
   }
   *{box-sizing:border-box}
   html,body{margin:0;background:var(--bg);color:var(--text);
     font-family:system-ui,-apple-system,"Segoe UI",Rubik,Arial,sans-serif;-webkit-tap-highlight-color:transparent}
   body{padding:0 16px calc(24px + env(safe-area-inset-bottom));max-width:720px;margin:0 auto}
+  body.has-player{padding-bottom:calc(200px + env(safe-area-inset-bottom))}
   header{display:flex;align-items:center;justify-content:space-between;padding:18px 0 10px}
   h1{font-size:24px;margin:0}
   .icon-btn{background:var(--card);border:1px solid var(--line);color:var(--text);width:44px;height:44px;border-radius:12px;font-size:20px}
@@ -35,23 +36,45 @@
   .chip.active{background:var(--text);color:var(--bg);border-color:var(--text)}
   #surprise{width:100%;margin:6px 0 14px;background:var(--card2);color:var(--text);border:1px dashed var(--line)}
   .card{background:var(--card);border-radius:16px;overflow:hidden;margin-bottom:14px;border:1px solid var(--line);transition:box-shadow .3s}
-  .card.flash{box-shadow:0 0 0 3px var(--accent)}
+  .card.flash,.card.now{box-shadow:0 0 0 3px var(--accent)}
+  .card.now{box-shadow:0 0 0 3px var(--audio)}
   .thumb{position:relative;aspect-ratio:16/9;background:#000}
   .thumb img{width:100%;height:100%;object-fit:cover;display:block}
   .dur{position:absolute;bottom:8px;left:8px;background:rgba(0,0,0,.8);padding:3px 8px;border-radius:6px;font-size:13px;direction:ltr}
   .badge{position:absolute;top:8px;right:8px;background:var(--accent2);color:#fff;padding:3px 10px;border-radius:999px;font-size:13px;font-weight:600}
+  .badge.audio{right:auto;left:8px;background:var(--audio)}
   .meta{padding:12px 14px 4px}
   .meta h2{font-size:17px;line-height:1.35;margin:0 0 4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
   .meta p{margin:0;color:var(--muted);font-size:14px}
-  .actions{display:flex;gap:8px;padding:12px 14px 14px}
-  .play{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;background:var(--accent);color:#fff;
-    text-decoration:none;border-radius:12px;padding:14px;font-size:18px;font-weight:700}
-  .sec{background:var(--card2);color:var(--text);border:1px solid var(--line);border-radius:12px;padding:0 14px;font-size:15px;font-weight:600;min-width:52px}
-  .sec.ok{color:var(--ok)}
+  .actions{padding:12px 14px 0}
+  .play{width:100%;display:flex;align-items:center;justify-content:center;gap:8px;background:var(--accent);color:#fff;border:0;
+    text-decoration:none;border-radius:12px;padding:14px;font-size:18px;font-weight:700;font-family:inherit}
+  .play.local{background:var(--audio)}
+  .actions2{display:flex;gap:8px;padding:10px 14px 14px;flex-wrap:wrap}
+  .sec{flex:1;display:flex;align-items:center;justify-content:center;background:var(--card2);color:var(--text);border:1px solid var(--line);
+    border-radius:12px;padding:10px 8px;font-size:14px;font-weight:600;text-decoration:none;font-family:inherit;white-space:nowrap;min-height:44px}
+  .sec.ok{color:var(--ok)} .sec.narrow{flex:0 0 48px}
+  .sec[disabled]{opacity:.6}
   .empty{text-align:center;color:var(--muted);padding:40px 10px;line-height:1.7}
-  #toast{position:fixed;bottom:calc(20px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%) translateY(120px);
-    background:var(--text);color:var(--bg);padding:12px 18px;border-radius:12px;font-weight:600;transition:transform .25s;z-index:10;max-width:90vw;text-align:center}
+  #toast{position:fixed;bottom:calc(20px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%) translateY(160px);
+    background:var(--text);color:var(--bg);padding:12px 18px;border-radius:12px;font-weight:600;transition:transform .25s;z-index:20;max-width:90vw;text-align:center}
   #toast.show{transform:translateX(-50%) translateY(0)}
+  body.has-player #toast.show{transform:translateX(-50%) translateY(-180px)}
+  /* נגן */
+  #player{position:fixed;left:0;right:0;bottom:0;z-index:10;background:#0b0c10;border-top:1px solid var(--line);
+    padding:12px 16px calc(14px + env(safe-area-inset-bottom))}
+  #player[hidden]{display:none}
+  .pin{max-width:720px;margin:0 auto}
+  .prow{display:flex;gap:12px;align-items:center}
+  .prow img{width:64px;height:36px;object-fit:cover;border-radius:6px;flex:none}
+  .pmeta{min-width:0;flex:1}
+  .pmeta b{display:block;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pmeta span{font-size:13px;color:var(--muted);direction:ltr;display:inline-block}
+  #pClose{background:none;border:0;color:var(--muted);font-size:22px;width:36px;height:36px}
+  #pSeek{width:100%;margin:10px 0 6px;accent-color:var(--audio);direction:ltr}
+  .pctrl{display:flex;justify-content:center;align-items:center;gap:14px;direction:ltr}
+  .pctrl button{background:var(--card2);color:var(--text);border:1px solid var(--line);border-radius:999px;height:52px;min-width:64px;font-size:16px;font-weight:700}
+  .pctrl #pPlay{background:var(--audio);border-color:var(--audio);min-width:76px;height:60px;font-size:24px}
   dialog{background:var(--card);color:var(--text);border:1px solid var(--line);border-radius:16px;width:min(92vw,480px);padding:20px}
   dialog::backdrop{background:rgba(0,0,0,.6)}
   dialog h3{margin:0 0 12px}
@@ -82,6 +105,24 @@
 <button class="btn" id="surprise">🎲 תבחר לי משהו</button>
 
 <main id="list"></main>
+
+<div id="player" hidden>
+  <div class="pin">
+    <div class="prow">
+      <img id="pImg" alt="">
+      <div class="pmeta"><b id="pTitle"></b><span id="pTime">0:00</span></div>
+      <button id="pClose" aria-label="סגור נגן">✕</button>
+    </div>
+    <input type="range" id="pSeek" min="0" max="1000" value="0" aria-label="מיקום בפרק">
+    <div class="pctrl">
+      <button id="pBack" aria-label="אחורה 15 שניות">↺ 15</button>
+      <button id="pPlay" aria-label="נגן/השהה">▶</button>
+      <button id="pFwd" aria-label="קדימה 30 שניות">30 ↻</button>
+      <button id="pSpeed" aria-label="מהירות">1×</button>
+    </div>
+  </div>
+</div>
+<audio id="audio" preload="metadata"></audio>
 <div id="toast"></div>
 
 <dialog id="settings">
@@ -99,16 +140,18 @@
 </dialog>
 
 <script>
-const STORE = 'podq.items.v1', KEYSTORE = 'podq.apikey';
+const STORE = 'podq.items.v1', KEYSTORE = 'podq.apikey', SPEEDSTORE = 'podq.speed';
 const $ = s => document.querySelector(s);
 const isAndroid = /Android/i.test(navigator.userAgent);
 
 let items = load();
 let view = 'queue', chanFilter = null, lenFilter = 'all';
+const searching = new Set();
 
 function load(){ try{ return JSON.parse(localStorage.getItem(STORE)) || []; }catch{ return []; } }
 function save(){ try{ localStorage.setItem(STORE, JSON.stringify(items)); }catch{} }
 function getKey(){ try{ return localStorage.getItem(KEYSTORE) || ''; }catch{ return ''; } }
+const byId = id => items.find(x => x.id === id);
 
 // ---------- קישורים ----------
 function extractId(text){
@@ -116,26 +159,21 @@ function extractId(text){
   const m = String(text).match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?(?:[^ ]*&)?v=|shorts\/|live\/|embed\/)|music\.youtube\.com\/watch\?(?:[^ ]*&)?v=)([A-Za-z0-9_-]{11})/);
   return m ? m[1] : null;
 }
-function musicUrl(id){ return 'https://music.youtube.com/watch?v=' + id; }
-function playHref(id){
-  // באנדרואיד: פתיחה ישירה באפליקציית YouTube Music (ולא ביוטיוב הרגיל)
-  if(isAndroid){
-    return 'intent://music.youtube.com/watch?v=' + id +
-      '#Intent;scheme=https;package=com.google.android.apps.youtube.music;' +
-      'S.browser_fallback_url=' + encodeURIComponent(musicUrl(id)) + ';end';
-  }
-  return musicUrl(id);
+function intentUrl(host, id, pkg){
+  const web = 'https://' + host + '/watch?v=' + id;
+  if(!isAndroid) return web;
+  return 'intent://' + host + '/watch?v=' + id + '#Intent;scheme=https;package=' + pkg + ';' +
+    'S.browser_fallback_url=' + encodeURIComponent(web) + ';end';
 }
+const musicHref = id => intentUrl('music.youtube.com', id, 'com.google.android.apps.youtube.music');
+const ytHref    = id => intentUrl('www.youtube.com',   id, 'com.google.android.youtube');
 
 // ---------- נתונים מיוטיוב ----------
 async function fetchMeta(id){
   const watch = 'https://www.youtube.com/watch?v=' + id;
-  const meta = { title: 'פרק ביוטיוב', channel: '', duration: null };
-  const tries = [
-    'https://www.youtube.com/oembed?format=json&url=' + encodeURIComponent(watch),
-    'https://noembed.com/embed?url=' + encodeURIComponent(watch)
-  ];
-  for(const u of tries){
+  const meta = { title: 'פרק ביוטיוב', channel: '' };
+  for(const u of ['https://www.youtube.com/oembed?format=json&url=' + encodeURIComponent(watch),
+                  'https://noembed.com/embed?url=' + encodeURIComponent(watch)]){
     try{
       const r = await fetch(u); if(!r.ok) continue;
       const j = await r.json(); if(!j.title) continue;
@@ -167,27 +205,186 @@ async function fetchApi(ids){
   return out;
 }
 
+// ---------- חיפוש קובץ אודיו (מאגר הפודקאסטים של Apple / RSS) ----------
+function jsonp(url){
+  return new Promise((resolve, reject) => {
+    const cb = 'jp' + Date.now() + Math.floor(Math.random()*1e6);
+    const s = document.createElement('script');
+    const t = setTimeout(() => { done(); reject(new Error('timeout')); }, 12000);
+    function done(){ clearTimeout(t); delete window[cb]; s.remove(); }
+    window[cb] = d => { done(); resolve(d); };
+    s.onerror = () => { done(); reject(new Error('net')); };
+    s.src = url + (url.includes('?') ? '&' : '?') + 'callback=' + cb;
+    document.head.appendChild(s);
+  });
+}
+const STOP = new Set(['פרק','פודקאסט','הפודקאסט','podcast','episode','ep','full','של','עם','את','על','the','and','a','of','in','to','official','video','audio']);
+function tokens(s){
+  return String(s||'').toLowerCase()
+    .replace(/[֑-ׇ]/g,'')
+    .replace(/[^\p{L}\p{N}]+/gu,' ')
+    .split(' ').filter(w => w.length > 1 && !STOP.has(w));
+}
+function similarity(a, b){
+  const A = new Set(tokens(a)), B = new Set(tokens(b));
+  if(!A.size || !B.size) return {score:0, common:0};
+  let common = 0; A.forEach(w => { if(B.has(w)) common++; });
+  return {score: common / Math.min(A.size, B.size), common};
+}
+function bestMatch(it, episodes){
+  let best = null, bestScore = 0;
+  for(const e of episodes){
+    if(!e.episodeUrl) continue;
+    const s = similarity(it.title, e.trackName);
+    if(s.common < 2 && !(s.common >= 1 && s.score === 1)) continue;
+    let score = s.score;
+    if(it.channel && similarity(it.channel, e.collectionName).common) score += 0.15;
+    if(score > bestScore){ bestScore = score; best = e; }
+  }
+  return bestScore >= 0.6 ? best : null;
+}
+const itunes = (q) => jsonp('https://itunes.apple.com/' + q + (q.includes('?') ? '&' : '?') + 'country=IL');
+
+async function findAudio(it){
+  if(searching.has(it.id)) return;
+  searching.add(it.id); render();
+  let found = null;
+  try{
+    const t = tokens(it.title);
+    const terms = [t.slice(0,8).join(' '), t.slice(0,4).join(' ')].filter((x,i,a) => x && a.indexOf(x)===i);
+    for(const term of terms){
+      const r = await itunes('search?media=podcast&entity=podcastEpisode&limit=50&term=' + encodeURIComponent(term));
+      found = bestMatch(it, r.results || []);
+      if(found) break;
+    }
+    if(!found && it.channel){
+      const shows = await itunes('search?media=podcast&entity=podcast&limit=3&term=' + encodeURIComponent(it.channel));
+      for(const show of (shows.results || [])){
+        const eps = await itunes('lookup?entity=podcastEpisode&limit=200&id=' + show.collectionId);
+        found = bestMatch(it, (eps.results || []).filter(x => x.wrapperType === 'podcastEpisode'));
+        if(found) break;
+      }
+    }
+  }catch{}
+  searching.delete(it.id);
+  it.audioChecked = true;
+  if(found){
+    it.audio = { url: found.episodeUrl, title: found.trackName, show: found.collectionName,
+                 dur: found.trackTimeMillis ? Math.round(found.trackTimeMillis/1000) : null };
+    if(!it.duration && it.audio.dur) it.duration = it.audio.dur;
+  }
+  save(); render();
+  return !!found;
+}
+async function checkPending(){
+  for(const it of items.filter(x => x.status==='queue' && !x.audioChecked && x.title !== 'טוען...')){
+    await findAudio(it);
+  }
+}
+
 // ---------- הוספה ----------
 async function addFromText(text){
   const id = extractId(text);
   if(!id){ toast('לא מצאתי סרטון ביוטיוב בקישור הזה'); return; }
-  const ex = items.find(x => x.id === id);
+  const ex = byId(id);
   if(ex){
     if(ex.status === 'done'){ ex.status='queue'; ex.doneAt=null; save(); render(); toast('הוחזר לתור'); }
     else toast('כבר נמצא בתור');
     return;
   }
   const it = { id, title:'טוען...', channel:'', duration:null, thumb:'https://i.ytimg.com/vi/'+id+'/hqdefault.jpg',
-    addedAt: Date.now(), status:'queue', startedAt:null, doneAt:null };
+    addedAt: Date.now(), status:'queue', startedAt:null, doneAt:null, audio:null, audioChecked:false, pos:0 };
   items.unshift(it); view='queue'; save(); render();
   Object.assign(it, await fetchMeta(id)); save(); render();
   toast('נוסף לתור ✓');
+  const ok = await findAudio(it);
+  if(ok) toast('🎧 נמצא קובץ שמע – אפשר לשמוע בתוך האפליקציה');
+}
+
+// ---------- נגן פנימי ----------
+const audio = $('#audio');
+let current = null, lastSave = 0;
+const SPEEDS = [1, 1.25, 1.5, 1.75, 2];
+let speed = +(localStorage.getItem(SPEEDSTORE) || 1);
+
+function playLocal(id){
+  const it = byId(id); if(!it || !it.audio) return;
+  if(current !== id){
+    if(current) savePos();
+    current = id;
+    audio.src = it.audio.url;
+    audio.playbackRate = speed;
+    const resume = it.pos || 0;
+    audio.addEventListener('loadedmetadata', function once(){
+      audio.removeEventListener('loadedmetadata', once);
+      if(resume > 5 && (!audio.duration || resume < audio.duration - 10)) audio.currentTime = resume;
+    });
+    $('#pImg').src = it.thumb; $('#pTitle').textContent = it.title;
+    $('#player').hidden = false; document.body.classList.add('has-player');
+    if('mediaSession' in navigator){
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: it.title, artist: it.channel || it.audio.show || '', album: 'הפודקאסטים שלי',
+        artwork: [{src: it.thumb, sizes: '480x360', type: 'image/jpeg'}]
+      });
+    }
+  }
+  it.startedAt = it.startedAt || Date.now(); save();
+  audio.play().catch(() => toast('לא הצלחתי לנגן את הקובץ'));
+  render();
+}
+function savePos(){
+  const it = byId(current); if(!it) return;
+  it.pos = Math.floor(audio.currentTime || 0); save();
+}
+const seekBy = s => { audio.currentTime = Math.max(0, Math.min((audio.duration||1e9), audio.currentTime + s)); };
+
+audio.addEventListener('play',  () => { $('#pPlay').textContent = '⏸'; if('mediaSession' in navigator) navigator.mediaSession.playbackState='playing'; });
+audio.addEventListener('pause', () => { $('#pPlay').textContent = '▶'; savePos(); if('mediaSession' in navigator) navigator.mediaSession.playbackState='paused'; });
+audio.addEventListener('timeupdate', () => {
+  const d = audio.duration || 0, c = audio.currentTime || 0;
+  $('#pTime').textContent = fmtDur(Math.floor(c)) + (d ? ' / ' + fmtDur(Math.floor(d)) : '');
+  if(d && !seeking) $('#pSeek').value = Math.round(c / d * 1000);
+  if(Date.now() - lastSave > 5000){ lastSave = Date.now(); savePos(); }
+  if('mediaSession' in navigator && d && navigator.mediaSession.setPositionState){
+    try{ navigator.mediaSession.setPositionState({duration: d, position: Math.min(c, d), playbackRate: audio.playbackRate}); }catch{}
+  }
+});
+audio.addEventListener('ended', () => {
+  const it = byId(current); if(!it) return;
+  it.status = 'done'; it.doneAt = Date.now(); it.pos = 0; save(); render();
+  toast('הפרק הסתיים וסומן כנשמע ✓');
+});
+audio.addEventListener('error', () => { if(audio.src) toast('הקובץ לא נטען. נסה ב-YouTube Music'); });
+
+let seeking = false;
+$('#pSeek').addEventListener('input', () => { seeking = true; });
+$('#pSeek').addEventListener('change', () => { if(audio.duration) audio.currentTime = $('#pSeek').value/1000*audio.duration; seeking = false; });
+$('#pPlay').addEventListener('click', () => audio.paused ? audio.play() : audio.pause());
+$('#pBack').addEventListener('click', () => seekBy(-15));
+$('#pFwd').addEventListener('click', () => seekBy(30));
+$('#pSpeed').addEventListener('click', () => {
+  speed = SPEEDS[(SPEEDS.indexOf(speed)+1) % SPEEDS.length];
+  audio.playbackRate = speed; $('#pSpeed').textContent = speed + '×';
+  try{ localStorage.setItem(SPEEDSTORE, speed); }catch{}
+});
+$('#pSpeed').textContent = speed + '×';
+$('#pClose').addEventListener('click', () => {
+  audio.pause(); savePos(); current = null; audio.removeAttribute('src'); audio.load();
+  $('#player').hidden = true; document.body.classList.remove('has-player'); render();
+});
+if('mediaSession' in navigator){
+  const ms = navigator.mediaSession;
+  const h = (a, f) => { try{ ms.setActionHandler(a, f); }catch{} };
+  h('play', () => audio.play()); h('pause', () => audio.pause());
+  h('seekbackward', () => seekBy(-15)); h('seekforward', () => seekBy(30));
+  h('previoustrack', () => seekBy(-15)); h('nexttrack', () => seekBy(30)); // כפתורי ההגה ברכב
+  h('seekto', d => { if(d.seekTime != null) audio.currentTime = d.seekTime; });
 }
 
 // ---------- תצוגה ----------
 const esc = s => String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function fmtDur(s){
-  if(!s) return '';
+  if(!s && s !== 0) return '';
   const h=Math.floor(s/3600), m=Math.floor(s%3600/60), sec=s%60;
   return h ? `${h}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}` : `${m}:${String(sec).padStart(2,'0')}`;
 }
@@ -201,6 +398,35 @@ function lenOk(it){
 function visible(){
   return items.filter(x => x.status===view && (!chanFilter || x.channel===chanFilter) && (view!=='queue' || lenOk(x)))
     .sort((a,b) => view==='done' ? (b.doneAt||0)-(a.doneAt||0) : b.addedAt-a.addedAt);
+}
+function card(it){
+  const has = !!it.audio, busy = searching.has(it.id);
+  const left = has && it.pos && it.duration ? Math.max(0, Math.round((it.duration - it.pos)/60)) : null;
+  const primary = has
+    ? `<button class="play local" data-local="${it.id}">🎧 ${current===it.id && !audio.paused ? 'מתנגן עכשיו' : 'נגן כאן'}</button>`
+    : `<a class="play" href="${musicHref(it.id)}" data-ext="${it.id}">▶ YouTube Music</a>`;
+  const findBtn = !has
+    ? `<button class="sec" data-find="${it.id}" ${busy?'disabled':''}>${busy ? 'מחפש...' : (it.audioChecked ? '🔍 חפש שוב' : '🔍 חפש שמע')}</button>` : '';
+  return `
+    <article class="card ${current===it.id?'now':''}" id="c-${it.id}">
+      <div class="thumb">
+        <img src="${esc(it.thumb)}" alt="" loading="lazy">
+        ${it.duration ? `<span class="dur">${fmtDur(it.duration)}</span>` : ''}
+        ${has ? `<span class="badge audio">🎧 שמע זמין</span>` : ''}
+        ${it.status==='queue' && it.startedAt ? `<span class="badge">${left!=null ? `נשארו ${left} דק'` : 'התחלת לשמוע'}</span>` : ''}
+      </div>
+      <div class="meta"><h2>${esc(it.title)}</h2><p>${esc(it.channel)}</p></div>
+      <div class="actions">${primary}</div>
+      <div class="actions2">
+        ${has ? `<a class="sec" href="${musicHref(it.id)}" data-ext="${it.id}">YouTube Music</a>` : ''}
+        <a class="sec" href="${ytHref(it.id)}" data-ext="${it.id}">YouTube</a>
+        ${findBtn}
+        ${it.status==='queue'
+          ? `<button class="sec ok narrow" data-done="${it.id}" aria-label="שמעתי">✓</button>`
+          : `<button class="sec narrow" data-back="${it.id}" aria-label="החזר לתור">↩</button>`}
+        <button class="sec narrow" data-del="${it.id}" aria-label="מחק">🗑</button>
+      </div>
+    </article>`;
 }
 function render(){
   const q = items.filter(x=>x.status==='queue'), d = items.filter(x=>x.status==='done');
@@ -223,32 +449,14 @@ function render(){
   $('#surprise').style.display = view==='queue' && q.length>1 ? '' : 'none';
 
   const list = visible();
-  if(!list.length){
-    $('#list').innerHTML = `<div class="empty">${view==='queue'
+  $('#list').innerHTML = list.length ? list.map(card).join('') :
+    `<div class="empty">${view==='queue'
       ? (q.length ? 'אין פרקים שמתאימים לסינון.' : 'התור ריק.<br>ביוטיוב: לחץ "שתף" על פרק ובחר "הפודקאסטים שלי",<br>או הדבק קישור למעלה.')
       : 'עוד לא סימנת פרקים ששמעת.'}</div>`;
-    return;
-  }
-  $('#list').innerHTML = list.map(it => `
-    <article class="card" id="c-${it.id}">
-      <div class="thumb">
-        <img src="${esc(it.thumb)}" alt="" loading="lazy">
-        ${it.duration ? `<span class="dur">${fmtDur(it.duration)}</span>` : ''}
-        ${it.status==='queue' && it.startedAt ? '<span class="badge">התחלת לשמוע</span>' : ''}
-      </div>
-      <div class="meta"><h2>${esc(it.title)}</h2><p>${esc(it.channel)}</p></div>
-      <div class="actions">
-        <a class="play" href="${playHref(it.id)}" data-play="${it.id}">▶ נגן</a>
-        ${it.status==='queue'
-          ? `<button class="sec ok" data-done="${it.id}" aria-label="שמעתי">✓</button>`
-          : `<button class="sec" data-back="${it.id}">לתור</button>`}
-        <button class="sec" data-del="${it.id}" aria-label="מחק">🗑</button>
-      </div>
-    </article>`).join('');
 }
 
 let toastT;
-function toast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),2200); }
+function toast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),2600); }
 
 // ---------- אירועים ----------
 $('#addForm').addEventListener('submit', e => { e.preventDefault(); const v=$('#urlInput').value.trim(); $('#urlInput').value=''; addFromText(v); });
@@ -261,14 +469,16 @@ $('#surprise').addEventListener('click', () => {
   const el = document.getElementById('c-'+pick.id);
   el.scrollIntoView({behavior:'smooth',block:'center'}); el.classList.add('flash'); setTimeout(()=>el.classList.remove('flash'),1800);
 });
-$('#list').addEventListener('click', e => {
-  const t = e.target.closest('[data-play],[data-done],[data-back],[data-del]'); if(!t) return;
-  const id = t.dataset.play||t.dataset.done||t.dataset.back||t.dataset.del;
-  const it = items.find(x=>x.id===id); if(!it) return;
-  if(t.dataset.play){ it.startedAt = Date.now(); save(); setTimeout(render,500); return; } // הקישור ממשיך ל-YouTube Music
+$('#list').addEventListener('click', async e => {
+  const t = e.target.closest('[data-ext],[data-local],[data-find],[data-done],[data-back],[data-del]'); if(!t) return;
+  const id = t.dataset.ext||t.dataset.local||t.dataset.find||t.dataset.done||t.dataset.back||t.dataset.del;
+  const it = byId(id); if(!it) return;
+  if(t.dataset.ext){ if(current) audio.pause(); it.startedAt = it.startedAt || Date.now(); save(); setTimeout(render,500); return; } // הקישור ממשיך לאפליקציה החיצונית
+  if(t.dataset.local){ if(current===id && !audio.paused) audio.pause(); else playLocal(id); render(); return; }
+  if(t.dataset.find){ const ok = await findAudio(it); toast(ok ? '🎧 נמצא קובץ שמע' : 'לא נמצא קובץ שמע לפרק הזה'); return; }
   if(t.dataset.done){ it.status='done'; it.doneAt=Date.now(); save(); render(); toast('סומן כנשמע ✓'); }
   if(t.dataset.back){ it.status='queue'; it.doneAt=null; save(); render(); toast('הוחזר לתור'); }
-  if(t.dataset.del){ if(confirm('למחוק את הפרק מהרשימה?')){ items=items.filter(x=>x.id!==id); save(); render(); } }
+  if(t.dataset.del){ if(confirm('למחוק את הפרק מהרשימה?')){ if(current===id) $('#pClose').click(); items=items.filter(x=>x.id!==id); save(); render(); } }
 });
 
 // הגדרות
@@ -298,6 +508,7 @@ $('#importFile').addEventListener('change', async e => {
   }catch{ toast('הקובץ לא תקין'); }
   e.target.value='';
 });
+document.addEventListener('visibilitychange', () => { if(document.hidden && current) savePos(); });
 
 // ---------- קבלת שיתוף מיוטיוב ----------
 (function handleShare(){
@@ -307,6 +518,7 @@ $('#importFile').addEventListener('change', async e => {
 })();
 
 render();
+checkPending();
 if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
 </body>
